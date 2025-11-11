@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useEffect, useReducer } from 'react'
 import './App.css'
 
 type Pokemon = {
@@ -147,35 +145,82 @@ function toCapitalized(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function App() {
-  const [count, setCount] = useState(0)
+type FetchState = {
+  loading: boolean
+  error: Error | null
+  data: Pokemon | null
+  success: boolean
+}
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-  const [data, setData] = useState<Pokemon | null>(null)
-  const [success, setSuccess] = useState(false)
+type FetchAction =
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS', payload: Pokemon }
+  | { type: 'FETCH_ERROR', payload: Error }
+
+function fetchReducer(state: FetchState, action: FetchAction) {
+  switch (action.type){
+    case 'FETCH_START':
+      return {
+        ...state,
+        loading: true,
+        error: null,
+        data: null,
+        success: false,
+      }
+
+    case 'FETCH_SUCCESS':
+      return {
+        ...state,
+        loading: false,
+        error: null,
+        data: action.payload,
+        success: true,
+      }
+      
+    case 'FETCH_ERROR':
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+        data: null,
+        success: false,
+      }
+
+    default:
+      return state
+  }
+}
+
+const initialState: FetchState = {
+  loading: false,
+  error: null as Error | null,
+  data: null as Pokemon | null,
+  success: false,
+}
+
+function App() {
+
+  const FETCH_START = 'FETCH_START'
+  const FETCH_SUCCESS = 'FETCH_SUCCESS'
+  const FETCH_ERROR = 'FETCH_ERROR'
+
+  const [state, dispatch] = useReducer(fetchReducer, initialState)
 
   const fetchPikachu = async () => {
-    setSuccess(false)
-    setData(null)
-    setError(null)
-    setLoading(true)
+    dispatch({ type: FETCH_START })
     try {
       const request = await fetch('https://pokeapi.co/api/v2/pokemon/pikachu')
 
       if (!request.ok) {
-        setError(new Error('Failed to fetch data'))
+        dispatch({ type: FETCH_ERROR, payload: new Error('Failed to fetch data') })
         return
       }
       const data: Pokemon = await request.json()
-      setSuccess(true)
-      setData(data)
+      dispatch({ type: FETCH_SUCCESS, payload: data })
 
       return data
     } catch (error) {
-        setError(error instanceof Error ? error : new Error(String(error)))
-    } finally {
-        setLoading(false)
+        dispatch({ type: FETCH_ERROR, payload: error instanceof Error ? error : new Error(String(error)) })
     }
   }
 
@@ -186,17 +231,17 @@ function App() {
   return (
     <>
       <div>
-        {loading && <p>loading...</p>}
-        {error && <p>error: {error.message}</p>}
-        {data && (
+        {state.loading && <p>loading...</p>}
+        {state.error && <p>error: {state.error.message}</p>}
+        {state.data && (
           <div>
-            {data.sprites.front_default && (
-              <img src={data.sprites.front_default} alt={data.name} />
+            {state.data.sprites.front_default && (
+              <img src={state.data.sprites.front_default} alt={state.data.name} />
             )}
-            <h1>{toCapitalized(data.name)}</h1>
-            <h3>id: {data.id}</h3>
-            <h2>Height: {data.height}</h2>
-            <h2>Weight: {data.weight}</h2>
+            <h1>{toCapitalized(state.data.name)}</h1>
+            <h3>id: {state.data.id}</h3>
+            <h2>Height: {state.data.height}</h2>
+            <h2>Weight: {state.data.weight}</h2>
           </div>
         )}
       </div>
