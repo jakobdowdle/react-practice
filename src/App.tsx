@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import './App.css'
 
 type Pokemon = {
@@ -146,11 +147,11 @@ function toCapitalized(str: string) {
 }
 
 
-async function fetchPikachu(): Promise<Pokemon> {
-  const request = await fetch('https://pokeapi.co/api/v2/pokemon/pikachu')
+async function fetchPokemon(name: string): Promise<Pokemon> {
+  const request = await fetch(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`)
 
   if (!request.ok) {
-    throw new Error('Failed to fetch data')
+    throw new Error('This Pokemon does not exist')
   }
 
   return await request.json()
@@ -158,13 +159,25 @@ async function fetchPikachu(): Promise<Pokemon> {
 
 function App() {
 
+  const [pokemonName, setPokemonName] = useState('pikachu')
+  const [inputValue, setInputValue] = useState('pikachu')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setPokemonName(inputValue.trim().toLowerCase())
+  }
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['pokemon', 'pikachu'], 
-    queryFn: fetchPikachu,            
+    queryKey: ['pokemon', pokemonName], 
+    queryFn: () => fetchPokemon(pokemonName),            
   })
 
   return (
     <>
+      <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', marginBottom: '20px' }}>
+        <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder='Enter a pokemon name' />
+        <button type="submit" onClick={handleSubmit}>Search</button>
+      </div>
       <div>
         {isLoading && <p>loading...</p>}
         {error && <p>error: {error.message}</p>}
@@ -175,11 +188,11 @@ function App() {
             )}
             <h1>{toCapitalized(data.name)}</h1>
             <h3>id: {data.id}</h3>
-            <h2>Height: {data.height}</h2>
-            <h2>Weight: {data.weight}</h2>
+            <h2>Height: {data.height} dm</h2>
+            <h2>Weight: {data.weight} hg</h2>
           </div>
         )}
-      </div>
+      </div>  
     </>
   )
 }
